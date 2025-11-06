@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Loja de Camisetas — Painéis Cliente & Admin</title>
+  <style>
+    /* Paleta restrita: apenas tons de roxo e azul, + branco/preto neutros */
+    :root{
+      --bg:#0b0920; /* fundo escuríssimo */
+      --card:#0f1530; /* cartão */
+      --texto:#ffffff;
+      --accent1:#6a5acd; /* roxo */
+      --accent2:#3b82f6; /* azul */
+      --glass: rgba(255,255,255,0.04);
+      --muted: rgba(255,255,255,0.7);
+    }
+
+    *{box-sizing:border-box}
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:linear-gradient(180deg,var(--bg),#050416);color:var(--texto);}
+
+    header{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;background:linear-gradient(90deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));backdrop-filter:blur(6px)}
+    .brand{font-size:20px;font-weight:700;letter-spacing:0.4px}
+
+    nav button{margin-left:10px;padding:8px 12px;border-radius:10px;border:none;cursor:pointer;font-weight:600;background:linear-gradient(90deg,var(--accent1),var(--accent2));color:var(--texto)}
+
+    main{padding:36px;display:grid;grid-template-columns:1fr 360px;gap:28px}
+
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:22px}
+    .card{background:linear-gradient(180deg,var(--card),rgba(15,21,48,0.6));padding:16px;border-radius:16px;border:1px solid rgba(255,255,255,0.03)}
+    img.prod{width:100%;height:280px;object-fit:cover;border-radius:12px;background:#070617}
+    h3{margin:10px 0 6px}
+    p.price{font-weight:700}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{padding:10px 12px;border-radius:10px;border:none;cursor:pointer;background:linear-gradient(90deg,var(--accent1),var(--accent2));color:var(--texto);font-weight:700}
+
+    /* Painel lateral (carrinho/painéis) */
+    aside{position:sticky;top:20px}
+    .sideCard{padding:16px;border-radius:14px;background:linear-gradient(180deg,var(--card),rgba(15,21,48,0.6));border:1px solid rgba(255,255,255,0.03)}
+    .listItem{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed rgba(255,255,255,0.03)}
+
+    footer{padding:20px;text-align:center;color:var(--muted)}
+
+    /* Forms */
+    input,select,textarea{width:100%;padding:10px;margin:6px 0;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--texto)}
+
+    .tabs{display:flex;gap:8px;margin-bottom:12px}
+    .tab{padding:8px 12px;border-radius:10px;cursor:pointer;background:linear-gradient(90deg,var(--accent1),var(--accent2));font-weight:700}
+
+    /* admin products table */
+    .row{display:flex;gap:8px;align-items:center}
+    .smallImg{width:64px;height:64px;object-fit:cover;border-radius:8px;background:#070617}
+
+    /* responsivo */
+    @media(max-width:980px){main{grid-template-columns:1fr;}.prod-grid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));}aside{position:static}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">Loja de Camisetas</div>
+    <nav>
+      <button id="btnEntrar">Entrar / Registrar</button>
+      <button id="btnAdmin">Painel Admin</button>
+    </nav>
+  </header>
+
+  <main>
+    <section>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h2>Produtos</h2>
+        <div style="display:flex;gap:8px">
+          <input id="busca" placeholder="Pesquisar" style="width:220px;padding:8px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--texto)">
+          <button class="btn" id="btnNovoProduto" style="display:none">Novo produto</button>
+        </div>
+      </div>
+
+      <div id="listaProdutos" class="grid prod-grid"></div>
+    </section>
+
+    <aside>
+      <div class="sideCard">
+        <h3>Carrinho</h3>
+        <div id="itensCarrinho"></div>
+        <p style="margin-top:10px"><strong>Total: R$ <span id="total">0</span></strong></p>
+
+        <!-- o link de pagamento já inclui o ID que você enviou -->
+        <a id="linkPagar" class="btn" href="#" target="_blank" style="display:block;text-align:center;text-decoration:none;margin-top:10px">Pagar (InfinitePay)</a>
+
+        <a id="btnEnviarWhats" class="btn" href="#" target="_blank" style="display:block;text-align:center;text-decoration:none;margin-top:8px">Enviar comprovante (WhatsApp)</a>
+
+        <div style="margin-top:12px">
+          <button class="btn" id="verPedidosCliente" style="display:none">Meus Pedidos</button>
+        </div>
+      </div>
+
+      <div style="height:16px"></div>
+
+      <div class="sideCard" id="statusInfo">
+        <h4>Status disponíveis</h4>
+        <ul>
+          <li>Aguardando pagamento</li>
+          <li>Pagamento recebido</li>
+          <li>Em separação</li>
+          <li>Enviado</li>
+          <li>Concluído</li>
+        </ul>
+      </div>
+    </aside>
+  </main>
+
+  <footer>Design minimal — apenas tons de roxo e azul. Número WhatsApp: 11951593078</footer>
+
+  <!-- Painel modal (login/cliente/admin) -->
+  <div id="modal" style="display:none;position:fixed;inset:0;background:rgba(2,2,10,0.6);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px">
+    <div style="width:100%;max-width:760px;background:linear-gradient(180deg,var(--card),rgba(15,21,48,0.6));padding:20px;border-radius:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 id="modalTitle">Entrar</h3>
+        <button onclick="closeModal()" class="btn">Fechar</button>
+      </div>
+
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <script>
+    /*********************
+      Dados e configuração
+    **********************/
+    // UUID/ID informado por você
+    const INFINITEPAY_MERCHANT = 'c3b7fdee-722e-4953-a9de-e30ed12411b8';
+
+    // número WhatsApp (sem símbolos)
+    const WHATS_NUMBER = '5511951593078'; // inclui código do país (55) para wa.me
+
+    // senha admin padrão
+    const ADMIN_PASSWORD = 'hevelyn12%';
+
+    // produtos (fallback). se houver localStorage, será carregado.
+    let produtos = [
+      { id: 1, nome: 'Camiseta Premium 1', preco: 75, img: 'placeholder1.jpg' },
+      { id: 2, nome: 'Camiseta Premium 2', preco: 80, img: 'placeholder2.jpg' },
+      { id: 3, nome: 'Camiseta Premium 3', preco: 78, img: 'placeholder3.jpg' }
+    ];
+
+    let carrinho = [];
+
+    // usuários simples (localStorage): {email,senha,nome,role:'client'|'admin'}
+    function getUsers(){ return JSON.parse(localStorage.getItem('usuarios')||'[]'); }
+    function saveUsers(u){ localStorage.setItem('usuarios', JSON.stringify(u)); }
+
+    // pedidos: {id,userEmail,items,total,status,createdAt,proofUrl}
+    function getOrders(){ return JSON.parse(localStorage.getItem('pedidos')||'[]'); }
+    function saveOrders(o){ localStorage.setItem('pedidos', JSON.stringify(o)); }
+
+    // carregar produtos do localStorage se existir
+    if(localStorage.getItem('produtos')) produtos = JSON.parse(localStorage.getItem('produtos'));
+
+    /*********************
+      Render produtos
+    **********************/
+    const lista = document.getElementById('listaProdutos');
+    function renderProdutos(filterText=''){
+      lista.innerHTML='';
+      const f = filterText.trim().toLowerCase();
+      produtos.forEach(p=>{
+        if(f && !p.nome.toLowerCase().includes(f)) return;
+        lista.innerHTML += `
+          <div class="card">
+            <img class="prod" src="${p.img}" alt="${p.nome}" />
+            <h3>${p.nome}</h3>
+            <p class="price">R$ ${p.preco.toFixed(2)}</p>
+            <div class="actions">
+              <button class="btn" onclick="addToCart(${p.id})">Adicionar</button>
+              <button class="btn" onclick="openProduct(${p.id})">Ver</button>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function openProduct(id){
+      const p = produtos.find(x=>x.id===id);
+      openModal('Produto', `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><img src="${p.img}" style="width:100%;border-radius:10px;height:280px;object-fit:cover"></div>
+        <div>
+          <h3>${p.nome}</h3>
+          <p style="font-weight:700">R$ ${p.preco.toFixed(2)}</p>
+          <p style="margin-top:12px">Descrição breve do produto.</p>
+          <button class="btn" onclick="addToCart(${p.id});closeModal()">Adicionar ao carrinho</button>
+        </div>
+      </div>`);
+    }
+
+    renderProdutos();
+
+    /*********************
+      Carrinho
+    **********************/
+    function addToCart(id){
+      const p = produtos.find(x=>x.id===id);
+      carrinho.push({ ...p });
+      renderCarrinho();
+    }
+
+    function renderCarrinho(){
+      const cont = document.getElementById('itensCarrinho');
+      cont.innerHTML = '';
+      let total = 0;
+      carrinho.forEach((it,i)=>{ total += it.preco; cont.innerHTML += `<div class="listItem"><div>${it.nome}</div><div>R$ ${it.preco.toFixed(2)}</div></div>`; });
+      document.getElementById('total').innerText = total.toFixed(2);
+
+      // link de pagamento: colocamos o merchant id no query string para já apontar pra sua conta.
+      const pagamentoUrl = `https://pay.infinitepay.io/checkout?merchant_id=${INFINITEPAY_MERCHANT}&amount=${total.toFixed(2)}`;
+      document.getElementById('linkPagar').href = pagamentoUrl;
+
+      // link whats com mensagem codificada
+      const msg = encodeURIComponent(`Olá! Estou enviando o comprovante do pedido. Total: R$ ${total.toFixed(2)}`);
+      document.getElementById('btnEnviarWhats').href = `https://wa.me/${WHATS_NUMBER}?text=${msg}`;
+    }
+
+    /*********************
+      Modal & auth
+    **********************/
+    function openModal(title, html){
+      document.getElementById('modalTitle').innerText = title;
+      document.getElementById('modalBody').innerHTML = html;
+      document.getElementById('modal').style.display = 'flex';
+    }
+    function closeModal(){ document.getElementById('modal').style.display = 'none'; }
+
+    // login/registro
+    document.getElementById('btnEntrar').addEventListener('click', ()=>{
+      showAuthTabs();
+    });
+
+    function showAuthTabs(){
+      openModal('Entrar / Registrar', `
+        <div class="tabs">
+          <div class="tab" onclick="showLogin()">Entrar</div>
+          <div class="tab" onclick="showRegister()">Registrar</div>
+        </div>
+        <div id="authBody"></div>
+      `);
+      showLogin();
+    }
+
+    function showLogin(){
+      document.getElementById('authBody').innerHTML = `
+        <input id="loginEmail" placeholder="Email">
+        <input id="loginPass" placeholder="Senha" type="password">
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn" onclick="login()">Entrar</button>
+          <button class="btn" onclick="showAdminLogin()">Entrar como Admin</button>
+        </div>
+      `;
+    }
+
+    function showRegister(){
+      document.getElementById('authBody').innerHTML = `
+        <input id="regNome" placeholder="Nome">
+        <input id="regEmail" placeholder="Email">
+        <input id="regPass" placeholder="Senha" type="password">
+        <button class="btn" onclick="register()">Registrar</button>
+      `;
+    }
+
+    function showAdminLogin(){
+      openModal('Painel Admin', `
+        <input id="adminSenha" placeholder="Senha admin">
+        <button class="btn" onclick="loginAdmin()">Entrar como Admin</button>
+      `);
+    }
+
+    function register(){
+      const nome = document.getElementById('regNome').value.trim();
+      const email = document.getElementById('regEmail').value.trim().toLowerCase();
+      const senha = document.getElementById('regPass').value;
+      if(!nome||!email||!senha) return alert('Preencha todos os campos');
+      const users = getUsers();
+      if(users.find(u=>u.email===email)) return alert('Usuário já existe');
+      users.push({nome,email,senha,role:'client'});
+      saveUsers(users);
+      alert('Registrado com sucesso. Agora faça login.');
+      showLogin();
+    }
+
+    function login(){
+      const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+      const senha = document.getElementById('loginPass').value;
+      const users = getUsers();
+      const u = users.find(x=>x.email===email && x.senha===senha);
+      if(!u) return alert('Credenciais inválidas');
+      localStorage.setItem('sessao', JSON.stringify({email:u.email,role:u.role,nome:u.nome}));
+      alert('Logado como ' + u.nome);
+      closeModal();
+      updateUIAuth();
+    }
+
+    function loginAdmin(){
+      const s = document.getElementById('adminSenha').value;
+      if(s!==ADMIN_PASSWORD) return alert('Senha admin incorreta');
+      // criar sessão admin
+      localStorage.setItem('sessao', JSON.stringify({email:'admin@loja',role:'admin',nome:'Administrador'}));
+      alert('Entrou como Admin');
+      closeModal();
+      updateUIAuth();
+      openAdminPanel();
+    }
+
+    function logout(){ localStorage.removeItem('sessao'); updateUIAuth(); }
+
+    function currentSession(){ return JSON.parse(localStorage.getItem('sessao')||'null'); }
+
+    function updateUIAuth(){
+      const sess = currentSession();
+      const btnEntrar = document.getElementById('btnEntrar');
+      const verPedidos = document.getElementById('verPedidosCliente');
+      const novoBtn = document.getElementById('btnNovoProduto');
+      if(sess){
+        btnEntrar.innerText = sess.nome + ' • Sair';
+        btnEntrar.onclick = ()=>{ if(confirm('Deseja sair?')) logout(); };
+        if(sess.role==='client') verPedidos.style.display='block'; else verPedidos.style.display='none';
+        if(sess.role==='admin') { document.getElementById('btnNovoProduto').style.display='inline-block'; }
+      } else {
+        btnEntrar.innerText = 'Entrar / Registrar';
+        btnEntrar.onclick = ()=> showAuthTabs();
+        verPedidos.style.display='none';
+        document.getElementById('btnNovoProduto').style.display='none';
+      }
+    }
+
+    updateUIAuth();
+
+    // ver pedidos do cliente
+    document.getElementById('verPedidosCliente').addEventListener('click', ()=>{
+      const sess = currentSession();
+      if(!sess) return alert('Faça login como cliente');
+      const pedidos = getOrders().filter(p=>p.userEmail===sess.email);
+      let html = '<div style="max-height:400px;overflow:auto">';
+      pedidos.forEach(ord=>{
+        html += `<div style="border-bottom:1px solid rgba(255,255,255,0.03);padding:8px;margin-bottom:8px">
+          <strong>Pedido #${ord.id}</strong><br>
+          Total: R$ ${ord.total.toFixed(2)}<br>
+          Status: ${ord.status}<br>
+          <button class='btn' onclick="openOrder(${ord.id})">Abrir</button>
+        </div>`;
+      });
+      html += '</div>';
+      openModal('Meus Pedidos', html);
+    });
+
+    function openOrder(id){
+      const ord = getOrders().find(x=>x.id===id);
+      let html = `<p><strong>Pedido #${ord.id}</strong></p><p>Total: R$ ${ord.total.toFixed(2)}</p><p>Status: ${ord.status}</p>`;
+      if(ord.proofUrl) html += `<p>Comprovante: <a href="${ord.proofUrl}" target="_blank">Abrir</a></p>`;
+      // se cliente, permitir enviar comprovante (upload local) e link WhatsApp
+      html += `
+        <p>Enviar comprovante:</p>
+        <input type='file' id='inputProof' accept='image/*'>
+        <button class='btn' onclick='uploadProof(${ord.id})'>Enviar</button>
+        <a class='btn' href='https://wa.me/${WHATS_NUMBER}?text=${encodeURIComponent('Segue o comprovante do pedido ' + ord.id)}' target='_blank'>Enviar via WhatsApp</a>
+      `;
+      openModal('Pedido', html);
+    }
+
+    window.uploadProof = function(id){
+      const file = document.getElementById('inputProof').files[0];
+      if(!file) return alert('Selecione uma imagem');
+      const reader = new FileReader();
+      reader.onload = function(e){
+        const orders = getOrders();
+        const ord = orders.find(x=>x.id===id);
+        ord.proofUrl = e.target.result;
+        ord.status = 'Pagamento recebido';
+        saveOrders(orders);
+        alert('Comprovante enviado e status atualizado para "Pagamento recebido"');
+        closeModal();
+      };
+      reader.readAsDataURL(file);
+    };
+
+    /*********************
+      Admin Panel
+    **********************/
+    document.getElementById('btnAdmin').addEventListener('click', ()=>{
+      const sess = currentSession();
+      if(sess && sess.role==='admin') openAdminPanel(); else showAdminLogin();
+    });
+
+    function openAdminPanel(){
+      const orders = getOrders();
+      let html = `
+        <div style="display:grid;grid-template-columns:1fr 320px;gap:12px">
+          <div>
+            <h4>Produtos</h4>
+            <div id='adminProdutosList'></div>
+          </div>
+          <div>
+            <h4>Adicionar / Editar</h4>
+            <input id='adminNome' placeholder='Nome'>
+            <input id='adminPreco' placeholder='Preço' type='number'>
+            <input id='adminImg' type='file' accept='image/*'>
+            <button class='btn' onclick='salvarProdutoAdmin()'>Salvar</button>
+          </div>
+        </div>
+        <div style="margin-top:14px">
+          <h4>Pedidos</h4>
+          <div id='adminPedidosList' style='max-height:260px;overflow:auto'></div>
+        </div>
+      `;
+      openModal('Painel Admin', html);
+      renderAdminLists();
+    }
+
+    function renderAdminLists(){
+      const cont = document.getElementById('adminProdutosList');
+      cont.innerHTML='';
+      produtos.forEach((p,i)=>{ cont.innerHTML += `<div class='row' style='margin-bottom:8px'><img class='smallImg' src='${p.img}'><div style='flex:1'><strong>${p.nome}</strong><div>R$ ${p.preco.toFixed(2)}</div></div><div><button class='btn' onclick='editarAdmin(${i})'>Editar</button><button class='btn' onclick='removerAdmin(${i})'>Remover</button></div></div>`; });
+
+      const pedidosCont = document.getElementById('adminPedidosList');
+      const pedidos = getOrders();
+      pedidosCont.innerHTML='';
+      pedidos.forEach(o=>{
+        pedidosCont.innerHTML += `<div style='border-bottom:1px solid rgba(255,255,255,0.03);padding:8px'><strong>#${o.id}</strong> ${o.userEmail}<br>Total: R$ ${o.total.toFixed(2)}<br>Status: <select onchange="alterarStatus(${o.id},this.value)">
+          <option ${o.status==='Aguardando pagamento'?'selected':''}>Aguardando pagamento</option>
+          <option ${o.status==='Pagamento recebido'?'selected':''}>Pagamento recebido</option>
+          <option ${o.status==='Em separação'?'selected':''}>Em separação</option>
+          <option ${o.status==='Enviado'?'selected':''}>Enviado</option>
+          <option ${o.status==='Concluído'?'selected':''}>Concluído</option>
+        </select></div>`;
+      });
+    }
+
+    window.alterarStatus = function(id,status){
+      const pedidos = getOrders();
+      const p = pedidos.find(x=>x.id===id);
+      if(!p) return; p.status = status; saveOrders(pedidos); renderAdminLists(); alert('Status atualizado');
+    };
+
+    window.editarAdmin = function(i){
+      document.getElementById('adminNome').value = produtos[i].nome;
+      document.getElementById('adminPreco').value = produtos[i].preco;
+      document.getElementById('adminNome').setAttribute('data-edit', i);
+    };
+
+    window.removerAdmin = function(i){ produtos.splice(i,1); localStorage.setItem('produtos', JSON.stringify(produtos)); renderProdutos(); renderAdminLists(); };
+
+    window.salvarProdutoAdmin = function(){
+      const nome = document.getElementById('adminNome').value.trim();
+      const preco = Number(document.getElementById('adminPreco').value);
+      const file = document.getElementById('adminImg').files[0];
+      if(!nome||!preco) return alert('Preencha nome e preço');
+      if(file){
+        const r = new FileReader(); r.onload = function(e){ processSalvar(nome,preco,e.target.result); };
+        r.readAsDataURL(file);
+      } else processSalvar(nome,preco,null);
+    };
+
+    function processSalvar(nome,preco,imgBase64){
+      const editIndex = document.getElementById('adminNome').getAttribute('data-edit');
+      if(editIndex!==null){ produtos[editIndex].nome = nome; produtos[editIndex].preco = preco; if(imgBase64) produtos[editIndex].img = imgBase64; document.getElementById('adminNome').removeAttribute('data-edit'); }
+      else produtos.push({id:Date.now(),nome,preco,img:imgBase64||'placeholder.jpg'});
+      localStorage.setItem('produtos', JSON.stringify(produtos)); renderProdutos(); renderAdminLists();
+      document.getElementById('adminNome').value=''; document.getElementById('adminPreco').value=''; document.getElementById('adminImg').value='';
+    }
+
+    /*********************
+      Checkout (criar pedido)
+    **********************/
+    // cria pedido simples e limpa carrinho
+    function criarPedido(){
+      const sess = currentSession();
+      if(!sess) return alert('Faça login como cliente para criar pedido');
+      if(carrinho.length===0) return alert('Carrinho vazio');
+      const total = carrinho.reduce((s,it)=>s+Number(it.preco),0);
+      const pedidos = getOrders();
+      const novo = { id: Date.now(), userEmail: sess.email, items: carrinho, total, status:'Aguardando pagamento', createdAt: new Date().toISOString(), proofUrl:null };
+      pedidos.push(novo); saveOrders(pedidos);
+      carrinho = []; renderCarrinho(); renderProdutos(); alert('Pedido criado. Você pode pagar no botão "Pagar" ou enviar comprovante via WhatsApp.');
+    }
+
+    // conectar botão pagar para criar pedido (se usuário logado)
+    document.getElementById('linkPagar').addEventListener('click', function(e){
+      const sess = currentSession();
+      if(!sess){ e.preventDefault(); alert('Faça login como cliente antes de pagar'); showAuthTabs(); return; }
+      if(carrinho.length===0){ e.preventDefault(); alert('Carrinho vazio'); return; }
+      // cria pedido local e depois segue para o link de pagamento (o link já monta amount)
+      criarPedido();
+    });
+
+    // botão enviar comprovante (abre wa.me) já configurado via renderCarrinho
+
+    // busca
+    document.getElementById('busca').addEventListener('input',(ev)=>{ renderProdutos(ev.target.value); });
+
+    // testar: botão novo produto só aparece para admin
+    document.getElementById('btnNovoProduto').addEventListener('click', ()=>{ openAdminPanel(); });
+
+    // inicializa carrinho render
+    renderCarrinho();
+
+    // atalho para abrir admin caso já logado admin
+    function showAdminLogin(){ openModal('Login Admin','<input id="adminSenha2" placeholder="Senha admin"><button class="btn" onclick="loginAdmin2()">Entrar</button>'); }
+    window.loginAdmin2 = function(){ const s = document.getElementById('adminSenha2').value; if(s!==ADMIN_PASSWORD) return alert('Senha incorreta'); localStorage.setItem('sessao', JSON.stringify({email:'admin@loja',role:'admin',nome:'Administrador'})); closeModal(); updateUIAuth(); openAdminPanel(); };
+
+  </script>
+</body>
+</html>
